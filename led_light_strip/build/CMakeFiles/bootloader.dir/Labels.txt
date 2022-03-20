@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/CMakeFiles/bootloader
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/CMakeFiles/bootloader.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/CMakeFiles/bootloader-complete.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/Users/jy/esp/esp-rainmaker/examples/led_light_strip/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule

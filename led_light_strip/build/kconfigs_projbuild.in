@@ -1,0 +1,7 @@
+source "/Users/jy/esp/esp-idf/components/app_update/Kconfig.projbuild"
+source "/Users/jy/esp/esp-idf/components/bootloader/Kconfig.projbuild"
+source "/Users/jy/esp/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "/Users/jy/esp/esp-idf/components/partition_table/Kconfig.projbuild"
+source "/Users/jy/esp/esp-rainmaker/components/esp_rainmaker/Kconfig.projbuild"
+source "/Users/jy/esp/esp-rainmaker/examples/common/app_wifi/Kconfig.projbuild"
+source "/Users/jy/esp/esp-rainmaker/examples/led_light_strip/main/Kconfig.projbuild"
