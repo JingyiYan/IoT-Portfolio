@@ -20,7 +20,7 @@
 
 #include <led_strip.h>
 #include <driver/rmt.h>
-#include "esp_log.h"
+#include <esp_log.h>
 
 
 /* This is the button that is used for toggling the power */
@@ -30,7 +30,7 @@
 #define WIFI_RESET_BUTTON_TIMEOUT       3
 #define FACTORY_RESET_BUTTON_TIMEOUT    10
 
-////////////////////////// RMT & LED STRIP CONFIG
+/* RMT & LED STRIP CONFIG */
 static const char *TAG = "LED STRIP ";
 
 #define RMT_TX_CHANNEL RMT_CHANNEL_0
@@ -41,14 +41,14 @@ led_strip_t *strip;
 uint32_t red = 0;
 uint32_t green = 0;
 uint32_t blue = 0;
-uint16_t start_rgb = 0;    // for rainbow chase
 
-///// hsv values
 static uint16_t g_hue = DEFAULT_HUE;
 static uint16_t g_saturation = DEFAULT_SATURATION;
 static uint16_t g_value = DEFAULT_BRIGHTNESS;
-static bool g_power = DEFAULT_POWER;
 
+static bool g_power = DEFAULT_POWER;
+static int g_speed = DEFAULT_SPEED_MS;
+static bool g_rc = false;
 
 /**
  * @brief Simple helper function, converting HSV color space to RGB color space
@@ -102,6 +102,89 @@ void led_strip_hsv2rgb(uint32_t h, uint32_t s, uint32_t v, uint32_t *r, uint32_t
     }
 }
 
+esp_err_t app_light_set_led(uint32_t hue, uint32_t saturation, uint32_t brightness)
+{
+    /* Whenever this function is called, light power will be ON */
+    if (!g_power) {
+        g_power = true;
+        esp_rmaker_param_update_and_report(
+                esp_rmaker_device_get_param_by_type(light_device, ESP_RMAKER_PARAM_POWER),
+                esp_rmaker_bool(g_power));
+    }
+    return app_set_strip(hue, saturation, brightness);
+    //return ws2812_led_set_hsv(hue, saturation, brightness);
+}
+
+esp_err_t app_light_set_power(bool power)
+{
+    g_power = power;
+    if (power) {
+        app_set_strip(g_hue, g_saturation, g_value);
+        //ws2812_led_set_hsv(g_hue, g_saturation, g_value);
+    } else {
+        g_rc = false;  // turn off rainbow chase as well
+        ESP_ERROR_CHECK(strip->clear(strip, 100));
+        //ws2812_led_clear();
+    }
+    return ESP_OK;
+}
+
+// rainbow chase on/off
+esp_err_t app_set_rainbow_chase(bool rc){
+    g_rc = rc;
+    if(g_rc && g_power){
+        app_rainbow_chase();
+    } else{
+        ESP_ERROR_CHECK(strip->clear(strip, 100));
+    }
+    return ESP_OK;
+}
+
+// rainbow chase main
+esp_err_t app_rainbow_chase(){
+    uint32_t r = 0;
+    uint32_t g = 0;
+    uint32_t b = 0;
+    uint16_t hue_rc = 0;
+    uint16_t start_rgb = 0;
+
+    // Clear LED strip
+    ESP_ERROR_CHECK(strip->clear(strip, 100));
+    // Show simple rainbow chasing pattern
+    ESP_LOGI(TAG, "LED Rainbow Chase Start");
+    int i = 0;
+    while (i < 20) {
+       // app_update();
+        for (int i = 0; i < 3; i++) {
+            for (int j = i; j < CONFIG_EXAMPLE_STRIP_LED_NUMBER; j += 3) {
+                // Build RGB values
+                hue_rc = j * 360 / CONFIG_EXAMPLE_STRIP_LED_NUMBER + start_rgb;
+                led_strip_hsv2rgb(hue_rc, g_saturation, g_value, &r, &g, &b);
+                // Write RGB values to strip driver
+                ESP_ERROR_CHECK(strip->set_pixel(strip, j, r, g, b));
+            }
+            // Flush RGB values to LEDs
+            ESP_ERROR_CHECK(strip->refresh(strip, 100));
+            vTaskDelay(pdMS_TO_TICKS(g_speed));
+            strip->clear(strip, 50);
+            vTaskDelay(pdMS_TO_TICKS(g_speed));
+        }
+        start_rgb += 60;
+        i++;
+    }
+    return ESP_OK;
+}
+
+// Change the speed of rainbow chase
+esp_err_t app_set_chase_speed(int speed){
+    g_speed = speed*10;
+    if(g_rc){
+        return app_set_rainbow_chase(true);
+    } else {
+        return app_set_rainbow_chase(false);
+    }
+}
+
 
 /**
  * @brief helper function to set all leds on the strip to 1 color
@@ -114,13 +197,12 @@ void led_strip_hsv2rgb(uint32_t h, uint32_t s, uint32_t v, uint32_t *r, uint32_t
     *      - ESP_ERR_INVALID_ARG: Set RGB for a specific pixel failed because of invalid parameters
     *      - ESP_FAIL: Set RGB for a specific pixel failed because other error occurred
  */
-esp_err_t led_set_hsv(uint32_t hue, uint32_t saturation, uint32_t value){
+esp_err_t app_set_strip(uint32_t hue, uint32_t saturation, uint32_t value){
     if (!strip) {
         return ESP_ERR_INVALID_STATE;
     }
     int i;
     for(i = 0; i < CONFIG_EXAMPLE_STRIP_LED_NUMBER; i++){
-        //////TODO might need to move this
         led_strip_hsv2rgb(hue, saturation, value, &red, &green, &blue);
         // Write RGB values to strip driver
         ESP_ERROR_CHECK(strip->set_pixel(strip, i, red, green, blue));
@@ -128,33 +210,6 @@ esp_err_t led_set_hsv(uint32_t hue, uint32_t saturation, uint32_t value){
     // Flush RGB values to LEDs
     ESP_ERROR_CHECK(strip->refresh(strip, 100));
 
-    return ESP_OK;
-}
-
-
-esp_err_t app_light_set_led(uint32_t hue, uint32_t saturation, uint32_t brightness)
-{
-    /* Whenever this function is called, light power will be ON */
-    if (!g_power) {
-        g_power = true;
-        esp_rmaker_param_update_and_report(
-                esp_rmaker_device_get_param_by_type(light_device, ESP_RMAKER_PARAM_POWER),
-                esp_rmaker_bool(g_power));
-    }
-    return led_set_hsv(hue, saturation, brightness);
-    //return ws2812_led_set_hsv(hue, saturation, brightness);
-}
-
-esp_err_t app_light_set_power(bool power)
-{
-    g_power = power;
-    if (power) {
-        led_set_hsv(g_hue, g_saturation, g_value);
-        //ws2812_led_set_hsv(g_hue, g_saturation, g_value);
-    } else {
-        ESP_ERROR_CHECK(strip->clear(strip, 100));
-        //ws2812_led_clear();
-    }
     return ESP_OK;
 }
 
@@ -178,7 +233,6 @@ esp_err_t app_light_set_saturation(uint16_t saturation)
 // initialize led strip 
 esp_err_t app_light_init(void)
 {
-    //////////////////////////////////////////////
     led_strip_hsv2rgb(g_hue, g_saturation, g_value, &red, &green, &blue);
     rmt_config_t config = RMT_DEFAULT_CONFIG_TX(CONFIG_EXAMPLE_RMT_TX_GPIO, RMT_TX_CHANNEL);
     // set counter clock to 40MHz
@@ -197,26 +251,12 @@ esp_err_t app_light_init(void)
     }
     
     if(g_power) {
-        // set all ????????????????????????????????
-        led_set_hsv(g_hue, g_saturation, g_value);
+        app_set_strip(g_hue, g_saturation, g_value);
     } else{
         // Clear LED strip (turn off all LEDs)
         ESP_ERROR_CHECK(strip->clear(strip, 100));
     }
     return ESP_OK;
-
-    /*
-    esp_err_t err = ws2812_led_init();
-    if (err != ESP_OK) {
-        return err;
-    }
-    if (g_power) {
-        ws2812_led_set_hsv(g_hue, g_saturation, g_value);
-    } else {
-        ws2812_led_clear();
-    }
-    return ESP_OK;
-    */
 }
 
 static void push_btn_cb(void *arg)

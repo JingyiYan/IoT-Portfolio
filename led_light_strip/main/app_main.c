@@ -16,6 +16,7 @@
 #include <esp_rmaker_core.h>
 #include <esp_rmaker_standard_params.h>
 #include <esp_rmaker_standard_devices.h>
+#include <esp_rmaker_standard_types.h>
 #include <esp_rmaker_ota.h>
 #include <esp_rmaker_schedule.h>
 
@@ -27,6 +28,7 @@
 static const char *TAG = "app_main";
 
 esp_rmaker_device_t *light_device;
+esp_rmaker_param_t *rainbow_chase;
 
 extern const char ota_server_cert[] asm("_binary_server_crt_start");
 
@@ -55,6 +57,14 @@ static esp_err_t write_cb(const esp_rmaker_device_t *device, const esp_rmaker_pa
         ESP_LOGI(TAG, "Received value = %d for %s - %s",
                 val.val.i, device_name, param_name);
         app_light_set_saturation(val.val.i);
+    } else if (strcmp(param_name, "RAINBOW_CHASE") == 0) {   // turn on rainbow chase
+        ESP_LOGI(TAG, "Received value = %s for %s - %s",
+                val.val.b? "true" : "false", device_name, param_name);
+        app_set_rainbow_chase(val.val.b);
+    } else if (strcmp(param_name, ESP_RMAKER_DEF_SPEED_NAME) == 0) { 
+        ESP_LOGI(TAG, "Received value = %s for %s - %s",
+                val.val.i? "true" : "false", device_name, param_name);
+        app_set_chase_speed(val.val.i);
     } else {
         /* Silently ignoring invalid params */
         return ESP_OK;
@@ -62,6 +72,7 @@ static esp_err_t write_cb(const esp_rmaker_device_t *device, const esp_rmaker_pa
     esp_rmaker_param_update_and_report(param, val);
     return ESP_OK;
 }
+
 
 void app_main()
 {
@@ -88,7 +99,7 @@ void app_main()
     esp_rmaker_config_t rainmaker_cfg = {
         .enable_time_sync = false,
     };
-    esp_rmaker_node_t *node = esp_rmaker_node_init(&rainmaker_cfg, "ESP RainMaker Device", "Lightbulb");
+    esp_rmaker_node_t *node = esp_rmaker_node_init(&rainmaker_cfg, "ESP RainMaker Device", "LEDStrip");
     if (!node) {
         ESP_LOGE(TAG, "Could not initialise node. Aborting!!!");
         vTaskDelay(5000/portTICK_PERIOD_MS);
@@ -103,8 +114,16 @@ void app_main()
     esp_rmaker_device_add_param(light_device, esp_rmaker_hue_param_create(ESP_RMAKER_DEF_HUE_NAME, DEFAULT_HUE));
     esp_rmaker_device_add_param(light_device, esp_rmaker_saturation_param_create(ESP_RMAKER_DEF_SATURATION_NAME, DEFAULT_SATURATION));
 
-    //TODO: ADD MORE FEATURES! ?rainbow chase mode(toggle switch)
+    // Rainbow chase (toggle switch); initially OFF
+    rainbow_chase = esp_rmaker_param_create("RAINBOW_CHASE", NULL, esp_rmaker_bool(false), PROP_FLAG_READ | PROP_FLAG_WRITE);
+    esp_rmaker_param_add_ui_type(rainbow_chase, ESP_RMAKER_UI_TOGGLE);
+    esp_rmaker_device_add_param(light_device, rainbow_chase);
+    
+    // speed slider
+    esp_rmaker_device_add_param(light_device, esp_rmaker_speed_param_create(ESP_RMAKER_DEF_SPEED_NAME, DEFAULT_SPEED_MS));
 
+
+    /* add node */
     esp_rmaker_node_add_device(node, light_device);
 
     /* Enable OTA */

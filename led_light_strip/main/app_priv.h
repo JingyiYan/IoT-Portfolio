@@ -13,12 +13,20 @@
 #define DEFAULT_HUE         180
 #define DEFAULT_SATURATION  100
 #define DEFAULT_BRIGHTNESS  25
+// default values for additional features
+#define DEFAULT_SPEED_MS (20)
+#define DEFAULT_RC false
 
 extern esp_rmaker_device_t *light_device;
 
 void app_driver_init(void);
+
 esp_err_t app_light_set(uint32_t hue, uint32_t saturation, uint32_t brightness);
 esp_err_t app_light_set_power(bool power);
 esp_err_t app_light_set_brightness(uint16_t brightness);
 esp_err_t app_light_set_hue(uint16_t hue);
 esp_err_t app_light_set_saturation(uint16_t saturation);
+esp_err_t app_set_strip(uint32_t hue, uint32_t saturation, uint32_t value);
+esp_err_t app_set_rainbow_chase(bool rc);
+esp_err_t app_rainbow_chase();
+esp_err_t app_set_chase_speed(int speed);
