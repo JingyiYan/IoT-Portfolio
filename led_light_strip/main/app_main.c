@@ -61,10 +61,6 @@ static esp_err_t write_cb(const esp_rmaker_device_t *device, const esp_rmaker_pa
         ESP_LOGI(TAG, "Received value = %s for %s - %s",
                 val.val.b? "true" : "false", device_name, param_name);
         app_set_rainbow_chase(val.val.b);
-    } else if (strcmp(param_name, ESP_RMAKER_DEF_SPEED_NAME) == 0) { 
-        ESP_LOGI(TAG, "Received value = %s for %s - %s",
-                val.val.i? "true" : "false", device_name, param_name);
-        app_set_chase_speed(val.val.i);
     } else {
         /* Silently ignoring invalid params */
         return ESP_OK;
@@ -119,10 +115,6 @@ void app_main()
     esp_rmaker_param_add_ui_type(rainbow_chase, ESP_RMAKER_UI_TOGGLE);
     esp_rmaker_device_add_param(light_device, rainbow_chase);
     
-    // speed slider
-    esp_rmaker_device_add_param(light_device, esp_rmaker_speed_param_create(ESP_RMAKER_DEF_SPEED_NAME, DEFAULT_SPEED_MS));
-
-
     /* add node */
     esp_rmaker_node_add_device(node, light_device);
 

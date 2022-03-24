@@ -22,6 +22,9 @@
 #include <driver/rmt.h>
 #include <esp_log.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 
 /* This is the button that is used for toggling the power */
 #define BUTTON_GPIO          CONFIG_EXAMPLE_BOARD_BUTTON_GPIO
@@ -47,7 +50,6 @@ static uint16_t g_saturation = DEFAULT_SATURATION;
 static uint16_t g_value = DEFAULT_BRIGHTNESS;
 
 static bool g_power = DEFAULT_POWER;
-static int g_speed = DEFAULT_SPEED_MS;
 static bool g_rc = false;
 
 /**
@@ -132,16 +134,21 @@ esp_err_t app_light_set_power(bool power)
 // rainbow chase on/off
 esp_err_t app_set_rainbow_chase(bool rc){
     g_rc = rc;
+    static TaskHandle_t xHandle = NULL;
     if(g_rc && g_power){
-        app_rainbow_chase();
+        ESP_LOGI(TAG, "TASK: Rainbow Chase on");
+        xTaskCreate(app_rainbow_chase, "Rainbow chase", configMINIMAL_STACK_SIZE, NULL, 1, &xHandle);
     } else{
+        ESP_LOGI(TAG, "TASK Delete: Rainbow Chase off");
+        //xHandle = NULL;
+        vTaskDelete(xHandle);
         ESP_ERROR_CHECK(strip->clear(strip, 100));
     }
     return ESP_OK;
 }
 
 // rainbow chase main
-esp_err_t app_rainbow_chase(){
+void app_rainbow_chase(void * param){
     uint32_t r = 0;
     uint32_t g = 0;
     uint32_t b = 0;
@@ -152,8 +159,7 @@ esp_err_t app_rainbow_chase(){
     ESP_ERROR_CHECK(strip->clear(strip, 100));
     // Show simple rainbow chasing pattern
     ESP_LOGI(TAG, "LED Rainbow Chase Start");
-    int i = 0;
-    while (i < 20) {
+    while (true) {
        // app_update();
         for (int i = 0; i < 3; i++) {
             for (int j = i; j < CONFIG_EXAMPLE_STRIP_LED_NUMBER; j += 3) {
@@ -165,23 +171,11 @@ esp_err_t app_rainbow_chase(){
             }
             // Flush RGB values to LEDs
             ESP_ERROR_CHECK(strip->refresh(strip, 100));
-            vTaskDelay(pdMS_TO_TICKS(g_speed));
+            vTaskDelay(pdMS_TO_TICKS(DEFAULT_SPEED_MS));
             strip->clear(strip, 50);
-            vTaskDelay(pdMS_TO_TICKS(g_speed));
+            vTaskDelay(pdMS_TO_TICKS(DEFAULT_SPEED_MS));
         }
         start_rgb += 60;
-        i++;
-    }
-    return ESP_OK;
-}
-
-// Change the speed of rainbow chase
-esp_err_t app_set_chase_speed(int speed){
-    g_speed = speed*10;
-    if(g_rc){
-        return app_set_rainbow_chase(true);
-    } else {
-        return app_set_rainbow_chase(false);
     }
 }
 
